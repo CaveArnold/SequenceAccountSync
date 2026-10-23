@@ -1,14 +1,15 @@
 ﻿/*
  * Developer: Cave Arnold
  * AI Assistant: Gemini (Google)
- * Date: 2026-08-23
- * Version: 1.0.1
+ * Date: 2026-10-23
+ * Version: 1.1.0.0
  * 
  * Logic Abstraction:
  * - Parses command-line arguments for API token, sync interval, and optional SMTP settings.
  * - Runs an infinite loop with a configurable delay between synchronization passes.
- * - Fetches account data from the Sequence API (hardcoded to page 1, state parameter removed).
+ * - Fetches account data from the Sequence API (hardcoded to page 1 through 3, state parameter removed).
  * - Retrieves detailed information for each account using its specific lowercase ID.
+ * - Intercepts and renames the "Discover More" account to include emojis and specific formatting.
  * - Compares incoming API data against existing SQL Server database records to explicitly log specific field changes (To/From).
  * - Detects changes in the balance (BalanceInCents) and records historical snapshots in the [Balances] table.
  * - Sends an email alert via SMTP if any account balances have changed.
@@ -105,7 +106,7 @@ namespace SequenceAccountSync
                     int totalAccountsProcessed = 0;
                     var emailMessages = new List<string>();
 
-                    // Limited to Page 1 only
+                    // Hard coded to use the first three pages due to a dynamic last page error...
                     for (int currentPage = 1; currentPage <= 3; currentPage++)
                     {
                         var request = new RestRequest("accounts/", Method.Get);
@@ -138,6 +139,13 @@ namespace SequenceAccountSync
                                 if (detailResponse.IsSuccessful && detailResponse.Data?.Data != null)
                                 {
                                     var acc = detailResponse.Data.Data;
+
+                                    // Intercept and rename specific account
+                                    if (string.Equals(acc.Name, "Discover More", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        acc.Name = "🍁Discover - More - Cash Back 💳";
+                                    }
+
                                     detailedAccounts.Add(acc);
 
                                     // Process Balance History and Email Alerts
