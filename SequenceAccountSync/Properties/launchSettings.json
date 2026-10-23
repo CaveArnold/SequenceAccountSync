@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SequenceAccountSync": {
+      "commandName": "Project",
+      "commandLineArgs": "--token \"sk_a5b494424adfc7a8ffb621300c9aeff1\" --interval 1 --smtp-server \"mail.tricconsulting.com\" --smtp-port 587 --email-from \"SequenceMonitor@tricconsulting.com\" --email-to \"CaveArnold@gmail.com\" --smtp-user \"CaveArnold@tricconsulting.com\" --smtp-pass \"Star77t!n@g#77\""
+    }
+  }
+}
