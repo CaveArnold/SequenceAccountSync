@@ -1,8 +1,8 @@
 ﻿/*
  * Developer: Cave Arnold
  * AI Assistant: Gemini (Google)
- * Date: 2026-10-23
- * Version: 1.1.0.0
+ * Date: 2026-11-12
+ * Version: 1.2.0.0
  * 
  * Logic Abstraction:
  * - Parses command-line arguments for API token, sync interval, and optional SMTP settings.
@@ -15,6 +15,7 @@
  * - Sends an email alert via SMTP if any account balances have changed.
  * - Uses an advanced SQL MERGE statement to efficiently insert or update the main [SequenceAccounts] table only when data changes.
  * - Ignores LinkedAccount field in data processing and database operations.
+ * - Added delay and informational feed back for inner and outer loops.
  */
 
 using System;
@@ -120,9 +121,11 @@ namespace SequenceAccountSync
 
                         var response = await client.ExecuteAsync<ApiResponse>(request);
 
+                        Log.Information("API call accounts on page {CurrentPage}. Status: {StatusCode} - Error Message: {ErrorMessage}", currentPage, response.StatusCode, response.ErrorMessage);
+
                         if (!response.IsSuccessful)
                         {
-                            Log.Error("API call failed on page {CurrentPage}. Status {StatusCode}: {ErrorMessage}", currentPage, response.StatusCode, response.ErrorMessage);
+                            Log.Error("API call failed on page {CurrentPage}. Status: {StatusCode} - Error Messsage: {ErrorMessage}", currentPage, response.StatusCode, response.ErrorMessage);
                             break;
                         }
 
@@ -132,9 +135,19 @@ namespace SequenceAccountSync
                         {
                             foreach (var account in accountList)
                             {
+
+                                // Wait before next pass
+                                await Task.Delay(delayMilliseconds);
+
                                 string lowerId = account.Id.ToString("D").ToLower();
                                 var detailRequest = new RestRequest($"accounts/{lowerId}", Method.Get);
                                 var detailResponse = await client.ExecuteAsync<SingleApiResponse>(detailRequest);
+
+                                if (!detailResponse.IsSuccessful)
+                                {
+                                    Log.Error("API call failed on account {AccountName} details on page {CurrentPage}. Status: {StatusCode} - Error Messsage: {ErrorMessage}", account.Name ,currentPage, detailResponse.StatusCode, detailResponse.ErrorMessage);
+                                    break;
+                                }
 
                                 if (detailResponse.IsSuccessful && detailResponse.Data?.Data != null)
                                 {
@@ -146,6 +159,8 @@ namespace SequenceAccountSync
                                         acc.Name = "🍁Discover - More - Cash Back 💳";
                                     }
 
+                                    Log.Information("API call account {AccountName} details on page {CurrentPage}. Status: {StatusCode}: Error Message: {ErrorMessage}", acc.Name, currentPage, detailResponse.StatusCode, detailResponse.ErrorMessage);
+                                    
                                     detailedAccounts.Add(acc);
 
                                     // Process Balance History and Email Alerts
